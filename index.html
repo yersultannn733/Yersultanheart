@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Сердце из слов «Я тебя люблю»</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #05020a;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: #fff;
+    }
+
+    /* Фоновый пульсирующий градиент */
+    .bg-glow {
+      position: absolute;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(255, 20, 147, 0.25) 0%, rgba(220, 20, 60, 0.1) 40%, rgba(0,0,0,0) 70%);
+      border-radius: 50%;
+      z-index: 1;
+      pointer-events: none;
+      animation: pulseGlow 3s infinite ease-in-out alternate;
+    }
+
+    @keyframes pulseGlow {
+      0% {
+        transform: scale(0.85);
+        opacity: 0.6;
+      }
+      100% {
+        transform: scale(1.15);
+        opacity: 1;
+      }
+    }
+
+    canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 2;
+      cursor: pointer;
+    }
+
+    /* Всплывающая подсказка при нажатии */
+    .tooltip {
+      position: absolute;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      background: rgba(20, 5, 10, 0.85);
+      border: 1px solid rgba(255, 50, 100, 0.4);
+      padding: 12px 24px;
+      border-radius: 30px;
+      backdrop-filter: blur(8px);
+      box-shadow: 0 0 20px rgba(255, 0, 80, 0.3);
+      font-size: 1.1rem;
+      color: #ffb3c1;
+      text-align: center;
+      pointer-events: none;
+      transition: all 0.3s ease;
+      opacity: 0;
+      transform: translate(-50%, 10px);
+    }
+
+    .tooltip.active {
+      opacity: 1;
+      transform: translate(-50%, 0);
+    }
+
+    /* Всплывающие фразы при клике */
+    .floating-text {
+      position: absolute;
+      pointer-events: none;
+      color: #ff3366;
+      font-weight: bold;
+      font-size: 1.5rem;
+      text-shadow: 0 0 10px #ff0055, 0 0 20px #ff0055;
+      animation: floatUp 1.5s ease-out forwards;
+      z-index: 20;
+      white-space: nowrap;
+    }
+
+    @keyframes floatUp {
+      0% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(0.8);
+      }
+      50% {
+        transform: translate(-50%, -80px) scale(1.2);
+      }
+      100% {
+        opacity: 0;
+        transform: translate(-50%, -130px) scale(1);
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="bg-glow"></div>
+  <canvas id="heartCanvas"></canvas>
+  <div class="tooltip" id="tooltip">Нажми на сердце ❤️</div>
+
+  <script>
+    const canvas = document.getElementById('heartCanvas');
+    const ctx = canvas.getContext('2d');
+    const tooltip = document.getElementById('tooltip');
+
+    let width, height;
+    function resize() {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // Список фраз "Я тебя люблю" на разных языках с указанием языка
+    const lovePhrases = [
+      { text: "Я тебя люблю", lang: "Русский" },
+      { text: "I love you", lang: "Английский" },
+      { text: "Мен сени сүйемін", lang: "Казахский" },
+      { text: "Je t'aime", lang: "Французский" },
+      { text: "Te amo", lang: "Испанский" },
+      { text: "Ich liebe dich", lang: "Немецкий" },
+      { text: "Ti amo", lang: "Итальянский" },
+      { text: "Seni seviyorum", lang: "Турецкий" },
+      { text: "愛してる", lang: "Японский" },
+      { text: "사랑해", lang: "Корейский" },
+      { text: "Я тебе кохаю", lang: "Украинский" },
+      { text: "Я цябе кахаю", lang: "Белорусский" },
+      { text: "أحبك", lang: "Арабский" },
+      { text: "я цябе кахаю", lang: "Белорусский" },
+      { text: "Kocham Cię", lang: "Польский" },
+      { text: "Szeretlek", lang: "Венгерский" },
+      { text: "Σ' αγαπώ", lang: "Греческий" },
+      { text: "אני אוהב אותך", lang: "Иврит" },
+      { text: "Anh yêu em", lang: "Вьетнамский" },
+      { text: "ฉันรักคุณ", lang: "Тайский" },
+      { text: "Aku cinta kamu", lang: "Индонезийский" },
+      { text: "Mahal kita", lang: "Филиппинский" },
+      { text: "S'agapo", lang: "Греческий (транслит)" },
+      { text: "я кохаю тебе", lang: "Украинский" },
+      { text: "Te iubesc", lang: "Румынский" },
+      { text: "Volim te", lang: "Хорватский / Сербский" },
+      { text: "Обичам те", lang: "Болгарский" },
+      { text: "Miluji tě", lang: "Чешский" },
+      { text: "T'estimo", lang: "Каталанский" },
+      { text: "Я любим тя", lang: "Старославянский" }
+    ];
+
+    // Функция генерации точки контура сердца
+    function getHeartPoint(t, scale = 16) {
+      const x = 16 * Math.pow(Math.sin(t), 3);
+      const y = -(13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t));
+      return { x: x * scale, y: y * scale };
+    }
+
+    // Проверка, находится ли точка внутри контура сердца
+    function isInsideHeart(px, py, scale = 16) {
+      const x = px / scale;
+      const y = -py / scale;
+      const a = x * x + y * y - 1;
+      return (a * a * a - x * x * y * y * y) <= 0;
+    }
+
+    const words = [];
+    const totalOutlineWords = 180;
+    const totalInnerWords = 160;
+
+    // 1. Создаем контурные слова (чертится сама форма сердца)
+    for (let i = 0; i < totalOutlineWords; i++) {
+      const t = (i / totalOutlineWords) * Math.PI * 2;
+      const pt = getHeartPoint(t, 16);
+      const phraseObj = lovePhrases[i % lovePhrases.length];
+
+      words.push({
+        x: pt.x,
+        y: pt.y,
+        text: phraseObj.text,
+        lang: phraseObj.lang,
+        size: 11 + Math.random() * 5,
+        type: 'outline',
+        order: i,
+        progress: 0, // от 0 до 1
+        color: `hsl(${340 + Math.random() * 25}, 100%, ${50 + Math.random() * 20}%)`,
+        opacity: 0,
+        scale: 0.3
+      });
+    }
+
+    // 2. Создаем внутренние слова (заполнение внутри)
+    let innerCount = 0;
+    while (innerCount < totalInnerWords) {
+      const rx = (Math.random() - 0.5) * 32;
+      const ry = (Math.random() - 0.5) * 32;
+
+      if (isInsideHeart(rx * 16, ry * 16, 16)) {
+        const phraseObj = lovePhrases[Math.floor(Math.random() * lovePhrases.length)];
+        words.push({
+          x: rx * 16,
+          y: ry * 16,
+          text: phraseObj.text,
+          lang: phraseObj.lang,
+          size: 9 + Math.random() * 6,
+          type: 'inner',
+          order: totalOutlineWords + innerCount,
+          progress: 0,
+          color: `hsl(${345 + Math.random() * 20}, 90%, ${40 + Math.random() * 25}%)`,
+          opacity: 0,
+          scale: 0.2
+        });
+        innerCount++;
+      }
+    }
+
+    // Плавающие фоновые частицы (звездочки/искорки)
+    const particles = Array.from({ length: 60 }, () => ({
+      x: Math.random() * window.innerWidth,
+      y: Math.random() * window.innerHeight,
+      size: Math.random() * 2.5 + 0.5,
+      speedX: (Math.random() - 0.5) * 0.4,
+      speedY: -Math.random() * 0.6 - 0.2,
+      opacity: Math.random() * 0.7 + 0.3,
+      pulse: Math.random() * 0.05 + 0.01
+    }));
+
+    // Интерактивные клик-частицы
+    let clickParticles = [];
+    function createClickEffect(cx, cy) {
+      for (let i = 0; i < 25; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = Math.random() * 4 + 1.5;
+        clickParticles.push({
+          x: cx,
+          y: cy,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          size: Math.random() * 4 + 2,
+          color: `hsl(${340 + Math.random() * 30}, 100%, 65%)`,
+          life: 1,
+          decay: Math.random() * 0.03 + 0.015
+        });
+      }
+    }
+
+    let startTime = null;
+    const outlineDuration = 4500; // 4.5 сек на рисовку контура
+    const innerDuration = 3000;   // 3 сек на заполнение
+
+    function animate(timestamp) {
+      if (!startTime) startTime = timestamp;
+      const elapsed = timestamp - startTime;
+
+      ctx.clearRect(0, 0, width, height);
+
+      const centerX = width / 2;
+      const centerY = height / 2 - 20;
+
+      // Отрисовка фоновых частиц
+      particles.forEach(p => {
+        p.x += p.speedX;
+        p.y += p.speedY;
+        p.opacity += Math.sin(timestamp * 0.003) * p.pulse;
+
+        if (p.y < 0) p.y = height;
+        if (p.x < 0) p.x = width;
+        if (p.x > width) p.x = 0;
+
+        ctx.fillStyle = `rgba(255, 100, 150, ${Math.abs(p.opacity)})`;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // Динамический масштаб (легкая пульсация сердца)
+      const beatScale = 1 + Math.sin(timestamp * 0.003) * 0.025;
+
+      // Отрисовка фраз/слов сердца
+      words.forEach(w => {
+        let appearanceDelay = 0;
+
+        if (w.type === 'outline') {
+          appearanceDelay = (w.order / totalOutlineWords) * outlineDuration;
+        } else {
+          appearanceDelay = outlineDuration + Math.random() * innerDuration * 0.5;
+        }
+
+        if (elapsed > appearanceDelay) {
+          if (w.opacity < 1) {
+            w.opacity += 0.04;
+            if (w.opacity > 1) w.opacity = 1;
+          }
+          if (w.scale < 1) {
+            w.scale += 0.05;
+            if (w.scale > 1) w.scale = 1;
+          }
+        }
+
+        if (w.opacity > 0) {
+          const posX = centerX + w.x * beatScale;
+          const posY = centerY + w.y * beatScale;
+
+          ctx.save();
+          ctx.translate(posX, posY);
+          ctx.scale(w.scale, w.scale);
+
+          ctx.font = `600 ${w.size}px 'Segoe UI', Arial, sans-serif`;
+          ctx.fillStyle = w.color;
+          ctx.globalAlpha = w.opacity;
+
+          // Неоновое свечение для текста
+          ctx.shadowColor = '#ff0055';
+          ctx.shadowBlur = w.type === 'outline' ? 8 : 4;
+
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(w.text, 0, 0);
+
+          ctx.restore();
+        }
+      });
+
+      // Анимация эффектов от нажатия
+      clickParticles.forEach((p, index) => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life -= p.decay;
+
+        if (p.life <= 0) {
+          clickParticles.splice(index, 1);
+        } else {
+          ctx.save();
+          ctx.globalAlpha = p.life;
+          ctx.fillStyle = p.color;
+          ctx.shadowColor = p.color;
+          ctx.shadowBlur = 10;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+      });
+
+      requestAnimationFrame(animate);
+    }
+
+    requestAnimationFrame(animate);
+
+    // Обработка клика/тапа по экрану
+    canvas.addEventListener('click', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const clickY = e.clientY - rect.top;
+
+      createClickEffect(clickX, clickY);
+
+      // Ищем ближайшее слово к месту клика
+      const centerX = width / 2;
+      const centerY = height / 2 - 20;
+
+      let closest = null;
+      let minDistance = Infinity;
+
+      words.forEach(w => {
+        const wordX = centerX + w.x;
+        const wordY = centerY + w.y;
+        const dist = Math.hypot(clickX - wordX, clickY - wordY);
+
+        if (dist < minDistance) {
+          minDistance = dist;
+          closest = w;
+        }
+      });
+
+      if (closest && minDistance < 60) {
+        // Показываем подсказку с языком
+        tooltip.textContent = `«${closest.text}» — ${closest.lang}`;
+        tooltip.classList.add('active');
+
+        // Создаем всплывающую надпись
+        const floatEl = document.createElement('div');
+        floatEl.className = 'floating-text';
+        floatEl.textContent = closest.text;
+        floatEl.style.left = `${clickX}px`;
+        floatEl.style.top = `${clickY}px`;
+        document.body.appendChild(floatEl);
+
+        setTimeout(() => floatEl.remove(), 1500);
+      }
+    });
+  </script>
+</body>
+</html>
